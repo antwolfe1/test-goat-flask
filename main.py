@@ -1,7 +1,7 @@
-from flask import Flask
+from flask import Flask, render_template
 
 app = Flask(__name__)
 
 @app.route("/")
-def hello_world():
-    return "<title>To-Do lists</title>"
+def homepage():
+    return render_template("index.html")
