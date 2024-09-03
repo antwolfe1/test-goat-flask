@@ -1,4 +1,4 @@
-import logging
+import tempfile
 import time
 import unittest
 
@@ -6,23 +6,31 @@ from selenium import webdriver
 from selenium.webdriver import Keys
 from selenium.webdriver.common.by import By
 
-
+from app import app, db
 
 
 class NewVisitorTest(unittest.TestCase):
 
+    db_fd, db_path = tempfile.mkstemp()
+    SQLALCHEMY_DATABASE_URI = "sqlite:///"
+    TESTING = True
+
     def setUp(self):
         self.browser = webdriver.Chrome()
+        with app.test_request_context():
+            db.create_all()
 
     def tearDown(self):
         self.browser.quit()
+        with app.test_request_context():
+            db.session.remove()
+            db.drop_all()
 
     def check_for_row_in_list_table(self, row_text):
         table = self.browser.find_element(By.ID, "id_list_table")
         rows = table.find_elements(By.TAG_NAME, "tr")
         self.assertIn(row_text, [row.text for row in rows],
                       f"New to-do item did not appear in table. Contents were: \n{table.text}")
-
 
     def test_can_start_a_todo_list(self):
         # Edith has heard about a cool new online to-do app.
