@@ -8,8 +8,7 @@ app = Flask(__name__)
 basedir = os.path.abspath(os.path.dirname(__file__))
 app.config['SQLALCHEMY_DATABASE_URI'] = f"sqlite:///{os.path.join(basedir, 'goat.sqlite')}"
 db = SQLAlchemy(app)
-with app.app_context():
-    db.create_all()
+
 
 migrate = Migrate(app, db)
 
@@ -53,5 +52,7 @@ def homepage():
     return render_template("index.html", items=items)
 
 if __name__ == "__main__":
+    with app.app_context():
+        db.create_all()
     app.run(debug=True)
 

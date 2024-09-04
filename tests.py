@@ -1,16 +1,15 @@
-import tempfile
 from unittest import TestCase
 
 from app import app, db, Item
 
 
-
 class HomePageTest(TestCase):
-    db_fd, db_path = tempfile.mkstemp()
-    SQLALCHEMY_DATABASE_URI = "sqlite:///"
-    TESTING = True
+    def __init__(self, methodName: str = "runTest"):
+        super().__init__(methodName)
+        self.test_app = None
 
     def setUp(self):
+        app.testing = True
         self.test_app = app.test_client(self)
         with app.test_request_context():
             db.create_all()
@@ -30,29 +29,34 @@ class HomePageTest(TestCase):
     def test_displays_all_list_items(self):
         with app.test_request_context():
             Item().delete_all()
-            Item().text = "itemey 1"
-            Item().text = "itemey 2"
+            Item(text = "itemey 1").save()
+            Item(text = "itemey 2").save()
             response = self.test_app.get("/")
-        self.assertIn(response.get_data(as_text=True), "itemey 1")
-        self.assertIn(response.get_data(as_text=True), "itemey 2")
+            print(response.get_data())
+        self.assertIn("itemey 1", response.get_data(as_text=True))
+        self.assertIn("itemey 2", response.get_data(as_text=True))
+
 
     def test_can_save_a_POST_request(self):
-        response = self.test_app.post("/", data={"item_text": "A new list item"})
+        with app.test_request_context():
+            Item().delete_all()
 
-        self.assertEqual(Item.query.count(), 1)
-        new_item = Item.query.first()
-        self.assertEqual(new_item.text, "A new list item")
-        self.assertIn("A new list item", response)
+            response = self.test_app.post("/", data={"item_text": "A new list item"})
+
+            self.assertEqual(Item.query.count(), 1)
+            new_item = Item.query.first()
+            self.assertEqual(new_item.text, "A new list item")
+
 
     def test_only_saves_item_when_necessary(self):
-        self.test_app.get("/")
-        self.assertEqual(Item.query.count(), 0)
+        with app.test_request_context():
+            Item().delete_all()
+            self.test_app.get("/")
+            self.assertEqual(Item.query.count(), 0)
+
 
 
 class ItemModelTest(TestCase):
-    db_fd, db_path = tempfile.mkstemp()
-    SQLALCHEMY_DATABASE_URI = "sqlite:///"
-    TESTING = True
 
     def setUp(self):
         app.testing = True
@@ -65,18 +69,19 @@ class ItemModelTest(TestCase):
             db.drop_all()
 
     def test_saving_and_retrieving_items(self):
-        first_item = Item()
-        first_item.text = "The first (ever) list item"
-        first_item.save()
+        with app.test_request_context():
+            first_item = Item()
+            first_item.text = "The first (ever) list item"
+            first_item.save()
 
-        second_item = Item()
-        second_item.text = "The second list item"
-        second_item.save()
+            second_item = Item()
+            second_item.text = "The second list item"
+            second_item.save()
 
-        saved_items = Item.query.all()
-        self.assertEqual(Item.query.count(), 2)  # rowcount
+            saved_items = Item.query.all()
+            self.assertEqual(Item.query.count(), 2)  # rowcount
 
-        first_saved_item = saved_items[0]
-        second_saved_item = saved_items[1]
-        self.assertEqual(first_saved_item.text, "The first (ever) list item")
-        self.assertEqual(second_saved_item.text, "The second list item")
+            first_saved_item = saved_items[0]
+            second_saved_item = saved_items[1]
+            self.assertEqual(first_saved_item.text, "The first (ever) list item")
+            self.assertEqual(second_saved_item.text, "The second list item")
